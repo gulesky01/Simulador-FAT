@@ -5,7 +5,7 @@
  | Disciplina: Sistemas Operacionais |
  | Professor.: Romário Borges |
  | Aluno(s)..: Gustavo Andrade Moreira de Assis |
- | Wagner Donizete Gonçalves. |
+ | ..........: Wagner Donizete Gonçalves. |
  | Data......: 30/11/2025 |
  +-------------------------------------------------------------+ */
 
@@ -19,6 +19,7 @@
 #define TRUE 1
 #define FALSE 0
 
+// listas encadeadas para representar setores livres e arquivos
 typedef struct noSet *ptnoSet;
 typedef struct noSet
 {
@@ -26,6 +27,7 @@ typedef struct noSet
     ptnoSet prox;
 } noSet;
 
+// lista de arquivos: guarda nome, tamanho em caracteres e lista de setores alocados
 typedef struct noArq *ptnoArq;
 typedef struct noArq
 {
@@ -35,12 +37,14 @@ typedef struct noArq
     ptnoArq prox;
 } noArq;
 
+// Memória simulada do "disco": 30 setores × 3 caracteres cada
 typedef char memoria[TAM_MEMORIA][TAM_GRANULO];
 
 /*---------------------------------------------
- * Funcoes para manipulacao das estruturas
+ * Funcoes auxiliares
  *---------------------------------------------*/
 
+ // Cria um nó representando um intervalo de setores livres
 ptnoSet criaNoSet(int inicio, int fim)
 {
     ptnoSet novo = (ptnoSet)malloc(sizeof(noSet));
@@ -55,6 +59,7 @@ ptnoSet criaNoSet(int inicio, int fim)
     return novo;
 }
 
+// Libera lista de setores
 void liberaListaSet(ptnoSet S)
 {
     ptnoSet aux;
@@ -66,6 +71,7 @@ void liberaListaSet(ptnoSet S)
     }
 }
 
+// Mostra lista de setores
 void mostraSetores(ptnoSet S, char *n)
 {
     printf("%s = [", n);
@@ -79,6 +85,7 @@ void mostraSetores(ptnoSet S, char *n)
     printf("]\n");
 }
 
+// Mostra lista de arquivos
 void mostraArquivos(ptnoArq A)
 {
     printf("Arquivos:\n");
@@ -91,6 +98,7 @@ void mostraArquivos(ptnoArq A)
     printf("\n");
 }
 
+// Mostra conteúdo da memória
 void mostraMemoria(memoria Memo)
 {
     int i, j;
@@ -106,6 +114,7 @@ void mostraMemoria(memoria Memo)
     printf("\n");
 }
 
+// Inicializa área livre e memória vazia
 void inicia(ptnoSet *Area, ptnoArq *Arq, memoria Memo)
 {
     int i, j;
@@ -119,6 +128,7 @@ void inicia(ptnoSet *Area, ptnoArq *Arq, memoria Memo)
             Memo[i][j] = ' ';
 }
 
+// Retira setores livres da área (alocação simples)
 ptnoSet retirarSetor(ptnoSet *Area, int quantidade)
 {
     ptnoSet aux = *Area, anterior = NULL;
@@ -126,11 +136,14 @@ ptnoSet retirarSetor(ptnoSet *Area, int quantidade)
     while (aux)
     {
         int tamanho = aux->fim - aux->inicio + 1;
+
+        // Verifica se há espaço suficiente neste bloco
         if (tamanho >= quantidade)
         {
             ptnoSet setorRetirado = criaNoSet(aux->inicio, aux->inicio + quantidade - 1);
             aux->inicio += quantidade;
 
+            // Se o bloco ficou vazio, remove-o da lista
             if (aux->inicio > aux->fim)
             {
                 if (anterior)
@@ -151,6 +164,7 @@ ptnoSet retirarSetor(ptnoSet *Area, int quantidade)
     return NULL; // Não há espaço suficiente
 }
 
+// Devolve setores livres para a área (liberação simples)
 void devolverSetor(ptnoSet *Area, ptnoSet setor)
 {
     if (!setor)
@@ -158,12 +172,14 @@ void devolverSetor(ptnoSet *Area, ptnoSet setor)
 
     ptnoSet aux = *Area, anterior = NULL;
 
+    // Encontra a posição correta para inserir o setor devolvido
     while (aux && aux->inicio < setor->inicio)
     {
         anterior = aux;
         aux = aux->prox;
     }
 
+    // Tenta fundir com o bloco anterior
     if (anterior && anterior->fim + 1 == setor->inicio)
     {
         anterior->fim = setor->fim;
@@ -183,6 +199,7 @@ void devolverSetor(ptnoSet *Area, ptnoSet setor)
         }
     }
 
+    // Tenta fundir com o bloco seguinte
     if (aux && setor->fim + 1 == aux->inicio)
     {
         setor->fim = aux->fim;
@@ -191,6 +208,7 @@ void devolverSetor(ptnoSet *Area, ptnoSet setor)
     }
 }
 
+// Grava arquivo na memória simulada
 void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char texto[])
 {
 
@@ -203,7 +221,6 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
     int tam = strlen(texto);
     int setoresNec = (tam + TAM_GRANULO - 1) / TAM_GRANULO;
 
-    /* Verifica existencia de arquivo com mesmo nome -> substituir? aqui rejeitamos */
     ptnoArq aux = *Arq;
     while (aux)
     {
@@ -215,21 +232,23 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
         aux = aux->prox;
     }
 
+    // Lista de setores alocados para o novo arquivo
     ptnoSet lista = NULL, ultimo = NULL;
     int offset = 0;
 
+    // Aloca os setores necessários
     while (setoresNec > 0)
     {
-        ptnoSet bloco = retirarSetor(Area, 1); /* aloca 1 setor por vez */
+        ptnoSet bloco = retirarSetor(Area, 1); 
 
         if (!bloco)
         {
             printf("ERRO: sem espaco no disco. Abortando gravacao.\n");
-            /* devolver qualquer bloco ja alocado */
             ptnoSet s = lista;
             while (s)
             {
-                ptnoSet p = s->prox;
+                // Devolve os setores já alocados
+                ptnoSet p = s->prox; 
                 s->prox = NULL;
                 devolverSetor(Area, s);
                 s = p;
@@ -237,13 +256,14 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
             return;
         }
 
+        // Adiciona o bloco à lista do arquivo
         if (!lista)
             lista = bloco;
         else
             ultimo->prox = bloco;
         ultimo = bloco;
 
-        /* escreve no setor (linha correspondente) os TAM_GRANULO caracteres */
+        // Grava os dados no bloco alocado
         int i;
         for (i = 0; i < TAM_GRANULO; i++)
         {
@@ -256,6 +276,7 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
         setoresNec--;
     }
 
+    // Cria o nó do arquivo e insere na lista de arquivos
     ptnoArq novo = (ptnoArq)malloc(sizeof(noArq));
     if (!novo)
     {
@@ -266,7 +287,7 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
     novo->caracteres = tam;
     novo->setores = lista;
 
-    /* insere em lista ordenada por nome (alfabetica) */
+    // Insere em ordem alfabética
     ptnoArq atual = *Arq, anterior = NULL;
     while (atual && strcmp(atual->nome, nome) < 0)
     {
@@ -282,6 +303,7 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
     printf("Arquivo '%s' gravado com sucesso! (%d bytes)\n", nome, tam);
 }
 
+// Deleta arquivo da memória simulada
 void deletarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[])
 {
     ptnoArq atual = *Arq, anterior = NULL;
@@ -298,6 +320,7 @@ void deletarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[])
         return;
     }
 
+    // Devolve os setores alocados ao arquivo
     ptnoSet setores = atual->setores;
     while (setores)
     {
@@ -334,6 +357,7 @@ void apresentarArquivo(ptnoArq Arq, memoria Memo, char nome[])
     int lidos = 0;
     int total = atual->caracteres;
 
+    // Lê e imprime o conteúdo do arquivo
     ptnoSet s = atual->setores;
     while (s && lidos < total)
     {
@@ -350,13 +374,14 @@ void apresentarArquivo(ptnoArq Arq, memoria Memo, char nome[])
 
 void defragmentar(ptnoArq *Arq, ptnoSet *Area, memoria Memo)
 {
+    // Cria uma nova memória temporária
     memoria novoMemo;
     int i, j;
     for (i = 0; i < TAM_MEMORIA; i++)
         for (j = 0; j < TAM_GRANULO; j++)
             novoMemo[i][j] = ' ';
 
-    int liga = 0; /* proximo setor livre onde escrever */
+    int liga = 0; // Próximo setor livre na nova memória
 
     ptnoArq a = *Arq;
     while (a)
@@ -364,7 +389,7 @@ void defragmentar(ptnoArq *Arq, ptnoSet *Area, memoria Memo)
         int total = a->caracteres;
         int setoresNec = (total + TAM_GRANULO - 1) / TAM_GRANULO;
 
-        /* copia conteudo do arquivo antigo para um buffer temporario */
+        
         char *buffer = (char *)malloc(total + 1);
         int idx = 0;
         ptnoSet s = a->setores;
@@ -378,8 +403,8 @@ void defragmentar(ptnoArq *Arq, ptnoSet *Area, memoria Memo)
         }
         buffer[total] = '\0';
 
-        /* escreve em novoMemo a partir de 'liga' setores contiguos */
-        int off = 0;
+        // Copia os dados para a nova memória
+        int off = 0; 
         for (int b = 0; b < setoresNec; b++)
         {
             for (int k = 0; k < TAM_GRANULO; k++)
@@ -395,7 +420,7 @@ void defragmentar(ptnoArq *Arq, ptnoSet *Area, memoria Memo)
             }
         }
 
-        /* libera lista antiga de setores e cria nova lista com bloco unico */
+       // Atualiza a lista de setores do arquivo
         liberaListaSet(a->setores);
         a->setores = criaNoSet(liga, liga + setoresNec - 1);
 
@@ -404,13 +429,13 @@ void defragmentar(ptnoArq *Arq, ptnoSet *Area, memoria Memo)
         a = a->prox;
     }
 
-    /* atualiza Memo com novoMemo */
+    // Copia a nova memória de volta para a memória original
     for (i = 0; i < TAM_MEMORIA; i++)
         for (j = 0; j < TAM_GRANULO; j++)
             Memo[i][j] = novoMemo[i][j];
 
-    /* reconstrói Area Livre */
-    /* libera antiga Area */
+   
+    // Recria a lista de áreas livres
     ptnoSet at = *Area;
     while (at)
     {
@@ -425,14 +450,14 @@ void defragmentar(ptnoArq *Arq, ptnoSet *Area, memoria Memo)
     }
     else
     {
-        *Area = NULL; /* disco cheio */
+        *Area = NULL; 
     }
 
     printf("Defragmentacao concluida.\n");
 }
 
 /*---------------------------------------------
- * Implementar as rotinas para simulacao da FAT
+ * Rotinas para simulacao da FAT
  *---------------------------------------------*/
 void ajuda()
 {
@@ -478,18 +503,18 @@ int main(void)
 
         switch (com[0])
         {
-        case 'G':                     // G nome texto
-            scanf("%12s", nome);      // lê nome
-            scanf(" %[^\n]s", texto); // lê texto com espaços
+        case 'G':                     
+            scanf("%12s", nome);      
+            scanf(" %[^\n]s", texto); 
             gravarArquivo(&Arq, &Area, Memo, nome, texto);
             break;
 
-        case 'D': // D nome
+        case 'D': 
             scanf("%12s", nome);
             deletarArquivo(&Arq, &Area, Memo, nome);
             break;
 
-        case 'A': // A nome
+        case 'A': 
             scanf("%12s", nome);
             apresentarArquivo(Arq, Memo, nome);
             break;
