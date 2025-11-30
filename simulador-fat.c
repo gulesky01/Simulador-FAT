@@ -217,7 +217,7 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
         printf("Nome muito longo (max 12 chars)\n");
         return;
     }
-
+    // Calcula setores necessários
     int tam = strlen(texto);
     int setoresNec = (tam + TAM_GRANULO - 1) / TAM_GRANULO;
 
@@ -240,7 +240,7 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
     while (setoresNec > 0)
     {
         ptnoSet bloco = retirarSetor(Area, 1); 
-
+        // Verifica se há espaço suficiente
         if (!bloco)
         {
             printf("ERRO: sem espaco no disco. Abortando gravacao.\n");
@@ -273,7 +273,7 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
                 Memo[bloco->inicio][i] = ' ';
         }
 
-        setoresNec--;
+        setoresNec--; // Decrementa o número de setores necessários
     }
 
     // Cria o nó do arquivo e insere na lista de arquivos
@@ -307,7 +307,8 @@ void gravarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[], char 
 void deletarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[])
 {
     ptnoArq atual = *Arq, anterior = NULL;
-
+    
+    // Encontra o arquivo a ser deletado
     while (atual && strcmp(atual->nome, nome) != 0)
     {
         anterior = atual;
@@ -329,7 +330,7 @@ void deletarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[])
         devolverSetor(Area, setores);
         setores = proximo;
     }
-
+    // Remove o arquivo da lista
     if (anterior)
         anterior->prox = atual->prox;
     else
@@ -342,7 +343,7 @@ void deletarArquivo(ptnoArq *Arq, ptnoSet *Area, memoria Memo, char nome[])
 void apresentarArquivo(ptnoArq Arq, memoria Memo, char nome[])
 {
     ptnoArq atual = Arq;
-
+    // Encontra o arquivo
     while (atual && strcmp(atual->nome, nome) != 0)
         atual = atual->prox;
 
@@ -353,7 +354,7 @@ void apresentarArquivo(ptnoArq Arq, memoria Memo, char nome[])
     }
 
     printf("Conteudo de %s:\n", nome);
-
+    
     int lidos = 0;
     int total = atual->caracteres;
 
@@ -389,7 +390,7 @@ void defragmentar(ptnoArq *Arq, ptnoSet *Area, memoria Memo)
         int total = a->caracteres;
         int setoresNec = (total + TAM_GRANULO - 1) / TAM_GRANULO;
 
-        
+        // Copia os dados do arquivo para um buffer temporário
         char *buffer = (char *)malloc(total + 1);
         int idx = 0;
         ptnoSet s = a->setores;
@@ -491,7 +492,7 @@ int main(void)
     char nome[13];
     char texto[TAM_MEMORIA * TAM_GRANULO];
 
-    inicia(&Area, &Arq, Memo);
+    inicia(&Area, &Arq, Memo); // Inicializa estruturas
 
     printf("\nSIMULADOR DE SISTEMA DE ARQUIVOS FAT - comandos: H para ajuda\n");
 
@@ -499,7 +500,7 @@ int main(void)
     {
         printf("\n=> ");
         scanf("%2s", com);
-        com[0] = toupper(com[0]);
+        com[0] = toupper(com[0]); // Converte para maiúscula
 
         switch (com[0])
         {
